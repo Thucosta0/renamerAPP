@@ -3,11 +3,13 @@ import tkinter as tk
 from tkinter import filedialog, messagebox
 import subprocess
 import os
+import shutil
 import threading
 import webbrowser
 import time
 import xml.etree.ElementTree as ET
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from numpy import size
 import pandas as pd
 from datetime import datetime
 from openpyxl.styles import Font, PatternFill, Alignment
@@ -17,7 +19,7 @@ class DanfeAppMassa:
     def __init__(self):
         try:
             # Configuração de tema e cores 
-            ctk.set_appearance_mode("light")  # Tema claro para ambiente hospitalar
+            ctk.set_appearance_mode("light")  # Tema claro
             ctk.set_default_color_theme("blue")
             
             # Paleta de cores renamerPRO© (suavizada)
@@ -38,14 +40,18 @@ class DanfeAppMassa:
             # Criar janela principal primeiro
             self.root = ctk.CTk()
             self.root.title("⚕️ renamerPRO©")
-            self.root.geometry("1300x600")
+            self.root.attributes('-fullscreen', True)
             self.root.minsize(800, 600)
             self.root.resizable(True, True)
             self.root.configure(fg_color=self.cores['cinza_medium'])
             
+            # Função para sair do fullscreen
+            def exit_fullscreen(event):
+                self.root.attributes('-fullscreen', False)
+            self.root.bind('<Escape>', exit_fullscreen)
+            
             # Inicializar variáveis após criar a janela
             self.pasta_xml = tk.StringVar()
-            self.pasta_saida = tk.StringVar()
             self.status_texto = tk.StringVar(value="Sistema pronto para processamento")
             self.arquivos_xml = []
             self.processando = False
@@ -102,8 +108,8 @@ class DanfeAppMassa:
         card = ctk.CTkFrame(
             parent,
             fg_color=self.cores['branco_suave'],
-            corner_radius=12,
-            border_width=1,
+            corner_radius=15,
+            border_width=2,
             border_color=self.cores['azul_light']
         )
         
@@ -112,7 +118,7 @@ class DanfeAppMassa:
             card,
             fg_color=self.cores['azul_primary'],
             corner_radius=10,
-            height=35
+            height=30
         )
         header.pack(fill="x", padx=5, pady=(2, 0))
         header.pack_propagate(False)
@@ -232,41 +238,7 @@ class DanfeAppMassa:
             icone="📁"
         )
         btn_xml.grid(row=0, column=1)
-        
-        # Pasta Saída
-        saida_label = ctk.CTkLabel(
-            input_frame,
-            text="💾 Pasta de Destino (Opcional):",
-            font=ctk.CTkFont(size=14, weight="bold"),
-            text_color=self.cores['cinza_text'],
-            anchor="w"
-        )
-        saida_label.grid(row=2, column=0, sticky="ew", pady=(0, 5))
-        
-        saida_container = ctk.CTkFrame(input_frame, fg_color="transparent")
-        saida_container.grid(row=3, column=0, sticky="ew", pady=(0, 15))
-        saida_container.grid_columnconfigure(0, weight=1)
-        
-        self.entrada_pasta_saida = ctk.CTkEntry(
-            saida_container,
-            textvariable=self.pasta_saida,
-            placeholder_text="Deixe vazio para usar a mesma pasta dos XMLs...",
-            font=ctk.CTkFont(size=12),
-            height=40,
-            corner_radius=8,
-            border_color=self.cores['azul_light']
-        )
-        self.entrada_pasta_saida.grid(row=0, column=0, sticky="ew", padx=(0, 10))
-        
-        btn_saida = self.criar_botao_profissional(
-            saida_container,
-            "Selecionar",
-            self.selecionar_pasta_saida,
-            width=120,
-            icone="💾"
-        )
-        btn_saida.grid(row=0, column=1)
-        
+               
         # Info e Controles
         controle_card = self.criar_card_profissional(
             container,
@@ -441,142 +413,75 @@ class DanfeAppMassa:
             icone="🔍"
         )
         btn_pasta_renomear.grid(row=0, column=1)
-        
-        # Pasta de Saída
-        saida_label = ctk.CTkLabel(
-            config_frame,
-            text="💾 Pasta de Destino (Opcional):",
-            font=ctk.CTkFont(size=14, weight="bold"),
-            text_color=self.cores['cinza_text'],
-            anchor="w"
-        )
-        saida_label.grid(row=2, column=0, sticky="ew", pady=(15, 5))
-        
-        saida_container = ctk.CTkFrame(config_frame, fg_color="transparent")
-        saida_container.grid(row=3, column=0, sticky="ew")
-        saida_container.grid_columnconfigure(0, weight=1)
-        
-        self.entrada_pasta_saida_renomear = ctk.CTkEntry(
-            saida_container,
-            placeholder_text="Deixe vazio para usar a mesma pasta dos XMLs...",
-            font=ctk.CTkFont(size=12),
-            height=40,
-            corner_radius=8,
-            border_color=self.cores['azul_light']
-        )
-        self.entrada_pasta_saida_renomear.grid(row=0, column=0, sticky="ew", padx=(0, 10))
-        
-        btn_saida_renomear = self.criar_botao_profissional(
-            saida_container,
-            "Selecionar",
-            self.selecionar_pasta_saida_renomear,
-            width=120,
-            icone="💾"
-        )
-        btn_saida_renomear.grid(row=0, column=1)
-        
+       
         # Controles avançados
         controles_card = self.criar_card_profissional(
             container,
-            "🛠️ Controles de Operação"
+            "🛠️ Controles de Operações"
         )
-        controles_card.pack(fill="x", pady=(0, 10))
+        controles_card.pack(fill="x", pady=(0, 0))
         
         # Botões organizados profissionalmente
         botoes_container = ctk.CTkFrame(controles_card, fg_color="transparent")
-        botoes_container.pack(fill="x", padx=12, pady=12)
-        
-        # Primeira linha de botões
-        linha1 = ctk.CTkFrame(botoes_container, fg_color="transparent")
-        linha1.pack(fill="x", pady=(0, 8))
-        
-        self.btn_escanear_chaves = self.criar_botao_profissional(
-            linha1,
-            "ESCANEAR CHAVES",
-            self.escanear_chaves_xml,
-            width=150,
+        botoes_container.pack(fill="x", padx=10, pady=(10, 10))
+        botoes_container.grid_columnconfigure((0, 1, 2, 3), weight=1)
+        botoes_container.grid_columnconfigure(4, weight=2)  # Botão de processar com mais peso
+
+        self.btn_lote_dados = self.criar_botao_profissional(
+            botoes_container,
+            "LOTE DE DADOS",
+            self.abrir_janela_lote,
             height=40,
-            cor_principal=self.cores['laranja_warning'],
-            cor_hover="#E5A500",
-            icone="🔍"
+            cor_principal="#6f42c1",
+            cor_hover="#5a349b",
+            icone="📋"
         )
-        self.btn_escanear_chaves.pack(side="left", padx=(0, 8))
-        
+        self.btn_lote_dados.grid(row=0, column=0, padx=(0, 8), sticky="ew")
+
         self.btn_adicionar_linha = self.criar_botao_profissional(
-            linha1,
+            botoes_container,
             "NOVA LINHA",
             self.adicionar_linha_renomeacao,
-            width=130,
             height=40,
             cor_principal=self.cores['azul_accent'],
             cor_hover="#0066CC",
             icone="➕"
         )
-        self.btn_adicionar_linha.pack(side="left", padx=8)
-        
-        self.btn_lote_dados = self.criar_botao_profissional(
-            linha1,
-            "LOTE DE DADOS",
-            self.abrir_janela_lote,
-            width=150,
-            height=40,
-            cor_principal="#6C757D",
-            cor_hover="#5A6268",
-            icone="📋"
-        )
-        self.btn_lote_dados.pack(side="left", padx=8)
-        
+        self.btn_adicionar_linha.grid(row=0, column=1, padx=8, sticky="ew")
+
         self.btn_limpar_dados = self.criar_botao_profissional(
-            linha1,
+            botoes_container,
             "LIMPAR",
             self.limpar_dados_massa,
-            width=100,
             height=40,
             cor_principal="#6C757D",
             cor_hover="#5A6268",
             icone="🧹"
         )
-        self.btn_limpar_dados.pack(side="left", padx=8)
-        
+        self.btn_limpar_dados.grid(row=0, column=2, padx=8, sticky="ew")
+
         self.btn_exportar_excel = self.criar_botao_profissional(
-            linha1,
+            botoes_container,
             "EXPORTAR EXCEL",
             self.exportar_para_excel,
-            width=150,
             height=40,
             cor_principal="#28A745",
             cor_hover="#218838",
             icone="📊"
         )
-        self.btn_exportar_excel.pack(side="left", padx=8)
-        
-        # Segunda linha de botões (ações principais)
-        linha2 = ctk.CTkFrame(botoes_container, fg_color="transparent")
-        linha2.pack(fill="x")
-        
-        self.btn_validar_renomear = self.criar_botao_profissional(
-            linha1,
-            "VALIDAR E RENOMEAR",
-            self.validar_e_renomear_thread,
-            width=180,
-            height=40,
-            cor_principal=self.cores['verde_success'],
-            cor_hover="#218838",
-            icone="✅"
+        self.btn_exportar_excel.grid(row=0, column=3, padx=8, sticky="ew")
+
+        self.btn_processar_completo = self.criar_botao_profissional(
+            botoes_container,
+            "🚀 PROCESSAR COMPLETO",
+            self.processar_completo_thread,
+            height=45,
+            cor_principal="#FF6B35",
+            cor_hover="#E55A2B",
         )
-        self.btn_validar_renomear.pack(side="right", padx=(8, 0))
+        self.btn_processar_completo.grid(row=0, column=4, padx=(8, 0), sticky="ew")
         
-        self.btn_processar_selecionados = self.criar_botao_profissional(
-            linha1,
-            "GERAR PDFs",
-            self.processar_selecionados_thread,
-            width=180,
-            height=40,
-            cor_principal=self.cores['azul_primary'],
-            cor_hover=self.cores['azul_secondary'],
-            icone="⚡"
-        )
-        self.btn_processar_selecionados.pack(side="right", padx=8)
+
         
         # Tabela profissional
         tabela_card = self.criar_card_profissional(
@@ -594,32 +499,33 @@ class DanfeAppMassa:
         header_tabela.pack(fill="x", padx=12, pady=(12, 5))
         
         # Grid responsivo para cabeçalhos
-        header_tabela.grid_columnconfigure(0, weight=2)  # Chave
-        header_tabela.grid_columnconfigure(1, weight=2)  # Nome
+        header_tabela.grid_columnconfigure(0, weight=2)  # Chave de Acesso
+        header_tabela.grid_columnconfigure(1, weight=2)  # Nome do Arquivo
         header_tabela.grid_columnconfigure(2, weight=1)  # Status
-        header_tabela.grid_columnconfigure(3, weight=0)  # Ações
-        
+        header_tabela.grid_columnconfigure(3, weight=2)  # Ações
+
+        # Cabeçalhos
         ctk.CTkLabel(
             header_tabela,
             text="🔑 Chave de Acesso",
             font=ctk.CTkFont(size=14, weight="bold"),
             text_color=self.cores['azul_primary']
         ).grid(row=0, column=0, padx=15, pady=12, sticky="w")
-        
+
         ctk.CTkLabel(
             header_tabela,
             text="📄 Nome do Arquivo",
             font=ctk.CTkFont(size=14, weight="bold"),
             text_color=self.cores['azul_primary']
         ).grid(row=0, column=1, padx=15, pady=12, sticky="w")
-        
+
         ctk.CTkLabel(
             header_tabela,
             text="📊 Status",
             font=ctk.CTkFont(size=14, weight="bold"),
             text_color=self.cores['azul_primary']
-        ).grid(row=0, column=2, padx=15, pady=12, sticky="w")
-        
+        ).grid(row=0, column=2, padx=30, pady=12, sticky="w")
+
         ctk.CTkLabel(
             header_tabela,
             text="🛠️ Ações",
@@ -650,9 +556,9 @@ class DanfeAppMassa:
         log_renomear_card.pack(fill="x", pady=(0, 10))
         
         self.log_renomeacao = ctk.CTkTextbox(
-            log_renomear_card,
+              log_renomear_card, height=200,
             font=ctk.CTkFont(size=11, family="Consolas"),
-            height=100,
+            
             corner_radius=8,
             fg_color=self.cores['cinza_medium'],
             text_color=self.cores['cinza_text']
@@ -683,7 +589,7 @@ class DanfeAppMassa:
         linha_frame.grid_columnconfigure(1, weight=2)  # Nome
         linha_frame.grid_columnconfigure(2, weight=1)  # Status
         linha_frame.grid_columnconfigure(3, weight=0)  # Botão
-        
+
         # Entry para chave
         entry_chave = ctk.CTkEntry(
             linha_frame,
@@ -694,7 +600,7 @@ class DanfeAppMassa:
             border_color=self.cores['azul_light']
         )
         entry_chave.grid(row=0, column=0, padx=(10, 5), pady=8, sticky="ew")
-        
+
         # Entry para nome
         entry_nome = ctk.CTkEntry(
             linha_frame,
@@ -705,7 +611,7 @@ class DanfeAppMassa:
             border_color=self.cores['azul_light']
         )
         entry_nome.grid(row=0, column=1, padx=5, pady=8, sticky="ew")
-        
+
         # Status
         label_status = ctk.CTkLabel(
             linha_frame,
@@ -714,18 +620,20 @@ class DanfeAppMassa:
             text_color=self.cores['cinza_text']
         )
         label_status.grid(row=0, column=2, padx=5, pady=8, sticky="w")
-        
+
         # Botão remover
         btn_remover = ctk.CTkButton(
             linha_frame,
-            text="🗑️",
+            text="      🗑️",
             command=lambda: self.remover_linha_renomeacao(linha_frame),
-            width=35,
-            height=35,
-            font=ctk.CTkFont(size=10),
+            width=38,
+            height=38,
+            font=ctk.CTkFont(size=18),
+            text_color=self.cores['branco_suave'],
             fg_color=self.cores['vermelho_error'],
             hover_color="#C82333",
-            corner_radius=6
+            corner_radius=6,
+            border_width=0,
         )
         btn_remover.grid(row=0, column=3, padx=(5, 10), pady=8)
         
@@ -764,7 +672,7 @@ class DanfeAppMassa:
                 self.entrada_pasta_renomear.delete(0, 'end')
                 self.entrada_pasta_renomear.insert(0, pasta)
                 self.log_renomeacao.delete("0.0", "end")
-                self.log_renomeacao.insert("0.0", f"📁 Pasta selecionada: {pasta}\n💡 Clique em 'ESCANEAR CHAVES' para continuar.")
+                self.log_renomeacao.insert("0.0", f"📁 Pasta selecionada: {pasta}\n💡 Use 'PROCESSAR COMPLETO' para iniciar.")
                 
         except tk.TclError as e:
             print(f"Erro TclError no seletor de pasta: {e}")
@@ -785,41 +693,6 @@ class DanfeAppMassa:
         except Exception as e:
             messagebox.showerror("Erro", f"Erro ao abrir seletor de pasta: {str(e)}")
             print(f"Erro no seletor de pasta: {e}")
-            
-    def escanear_chaves_xml(self):
-        pasta = self.entrada_pasta_renomear.get()
-        if not pasta:
-            messagebox.showerror("Erro", "Selecione a pasta com XMLs primeiro!")
-            return
-            
-        self.chaves_xml = {}
-        arquivos_processados = 0
-        
-        self.log_renomeacao.delete("0.0", "end")
-        self.log_renomeacao.insert("0.0", "🔍 Escaneando chaves de acesso...\n\n")
-        
-        # Usar função auxiliar (elimina duplicação)
-        arquivos_xml = self.escanear_xmls_pasta(pasta)
-        
-        try:
-            for arquivo in arquivos_xml:
-                nome_arquivo = os.path.basename(arquivo)
-                chave = self.extrair_chave_xml(arquivo)
-                
-                if chave:
-                    self.chaves_xml[chave] = arquivo
-                    arquivos_processados += 1
-                    self.log_renomeacao.insert("end", f"✅ {nome_arquivo}: {chave}\n")
-                else:
-                    self.log_renomeacao.insert("end", f"❌ {nome_arquivo}: Chave não encontrada\n")
-                        
-            self.log_renomeacao.insert("end", f"\n📊 Total: {arquivos_processados} chaves mapeadas\n")
-            self.log_renomeacao.insert("end", "✅ Escaneamento concluído! Agora preencha as chaves desejadas.\n")
-            
-        except Exception as e:
-            self.log_renomeacao.insert("end", f"❌ Erro ao escanear: {str(e)}\n")
-            
-        self.log_renomeacao.see("end")
         
     def extrair_chave_xml(self, caminho_arquivo):
         try:
@@ -971,27 +844,22 @@ class DanfeAppMassa:
             messagebox.showerror("Erro", "Escaneie as chaves primeiro!")
             return
             
-        # Verificar pasta de saída
-        pasta_saida = self.entrada_pasta_saida_renomear.get().strip()
-        if not pasta_saida:
-            messagebox.showerror("Erro", "Selecione a pasta de saída primeiro!")
-            return
-            
-        if not os.path.exists(pasta_saida):
-            messagebox.showerror("Erro", "Pasta de saída não existe!")
-            return
+        # Criar pastas automaticamente no diretório dos XMLs
+        pasta_xml = self.entrada_pasta_renomear.get()
+        pasta_renomeados = os.path.join(pasta_xml, "Arquivos Renomeados")
+        pasta_nao_renomeados = os.path.join(pasta_xml, "Arquivos Não Renomeados")
+        
+        # Criar as pastas se não existirem
+        os.makedirs(pasta_renomeados, exist_ok=True)
+        os.makedirs(pasta_nao_renomeados, exist_ok=True)
             
         sucessos = 0
         erros = 0
         
-        # Criar pasta para XMLs não convertidos
-        pasta_nao_convertidos = os.path.join(pasta_saida, "XMLs não convertidos")
-        if not os.path.exists(pasta_nao_convertidos):
-            os.makedirs(pasta_nao_convertidos)
-            
         self.root.after(0, lambda: self.log_renomeacao.insert("end", "\n🚀 INICIANDO VALIDAÇÃO E RENOMEAÇÃO...\n\n"))
-        self.root.after(0, lambda: self.log_renomeacao.insert("end", f"📁 Pasta de saída: {pasta_saida}\n"))
-        self.root.after(0, lambda: self.log_renomeacao.insert("end", f"📁 XMLs não convertidos: {pasta_nao_convertidos}\n\n"))
+        self.root.after(0, lambda: self.log_renomeacao.insert("end", f"📁 Pasta de origem: {pasta_xml}\n"))
+        self.root.after(0, lambda: self.log_renomeacao.insert("end", f"📁 Arquivos renomeados: {pasta_renomeados}\n"))
+        self.root.after(0, lambda: self.log_renomeacao.insert("end", f"📁 Arquivos não renomeados: {pasta_nao_renomeados}\n\n"))
         
         # Coletar chaves que serão convertidas
         chaves_para_converter = set()
@@ -1029,7 +897,7 @@ class DanfeAppMassa:
             # Renomear arquivo
             try:
                 arquivo_original = self.chaves_xml[chave]
-                novo_nome = os.path.join(pasta_saida, f"{nome_final}.xml")
+                novo_nome = os.path.join(pasta_renomeados, f"{nome_final}.xml")
                 
                 if os.path.exists(novo_nome):
                     self.root.after(0, lambda l=linha: l['status'].configure(text="❌ Existe"))
@@ -1037,9 +905,9 @@ class DanfeAppMassa:
                     erros += 1
                     continue
                     
-                # Copiar arquivo para pasta de saída com novo nome
+                # Copiar arquivo para pasta de arquivos renomeados com novo nome
                 import shutil
-                shutil.copy2(arquivo_original, novo_nome)
+                shutil.move(arquivo_original, novo_nome)
                 
                 self.root.after(0, lambda l=linha: l['status'].configure(text="✅ OK"))
                 self.root.after(0, lambda o=os.path.basename(arquivo_original), n=nome_final: 
@@ -1050,64 +918,24 @@ class DanfeAppMassa:
                 self.root.after(0, lambda l=linha: l['status'].configure(text="❌ Erro"))
                 self.root.after(0, lambda e=str(e): self.log_renomeacao.insert("end", f"❌ Erro: {e}\n"))
                 erros += 1
-                
-        # Mover XMLs não convertidos para pasta específica
-        xmls_nao_convertidos = 0
-        for chave, arquivo_original in self.chaves_xml.items():
-            if chave not in chaves_para_converter:
-                try:
-                    nome_arquivo = os.path.basename(arquivo_original)
-                    destino = os.path.join(pasta_nao_convertidos, nome_arquivo)
-                    
-                    # Evitar sobrescrever arquivos
-                    contador = 1
-                    while os.path.exists(destino):
-                        nome_base, ext = os.path.splitext(nome_arquivo)
-                        destino = os.path.join(pasta_nao_convertidos, f"{nome_base}_{contador}{ext}")
-                        contador += 1
-                    
-                    import shutil
-                    shutil.copy2(arquivo_original, destino)
-                    xmls_nao_convertidos += 1
-                    
-                except Exception as e:
-                    self.root.after(0, lambda e=str(e): self.log_renomeacao.insert("end", f"❌ Erro ao mover XML não convertido: {e}\n"))
-        
-        # Excluir XMLs originais convertidos
-        xmls_excluidos = 0
-        for linha in self.linhas_renomeacao:
-            chave_original = linha['chave'].get().strip()
-            if chave_original and linha['status'].cget('text') == "✅ OK":
-                chave = chave_original.strip()
-                if chave in self.chaves_xml:
-                    try:
-                        arquivo_original = self.chaves_xml[chave]
-                        os.remove(arquivo_original)
-                        xmls_excluidos += 1
-                        self.root.after(0, lambda a=os.path.basename(arquivo_original): 
-                                      self.log_renomeacao.insert("end", f"🗑️ Excluído: {a}\n"))
-                    except Exception as e:
-                        self.root.after(0, lambda e=str(e): self.log_renomeacao.insert("end", f"❌ Erro ao excluir: {e}\n"))
-                
+              
         self.root.after(0, lambda: self.log_renomeacao.insert("end", f"\n🎉 RENOMEAÇÃO CONCLUÍDA!\n"))
-        self.root.after(0, lambda: self.log_renomeacao.insert("end", f"✅ XMLs convertidos: {sucessos}\n"))
-        self.root.after(0, lambda: self.log_renomeacao.insert("end", f"📁 XMLs não convertidos movidos: {xmls_nao_convertidos}\n"))
-        self.root.after(0, lambda: self.log_renomeacao.insert("end", f"🗑️ XMLs originais excluídos: {xmls_excluidos}\n"))
+        self.root.after(0, lambda: self.log_renomeacao.insert("end", f"✅ XMLs renomeados: {sucessos}\n"))
         self.root.after(0, lambda: self.log_renomeacao.insert("end", f"❌ Erros: {erros}\n"))
         self.root.after(0, lambda: self.log_renomeacao.see("end"))
         
         if sucessos > 0:
             resposta = messagebox.askyesno(
                 "Concluído!", 
-                f"Renomeação finalizada!\n\n✅ {sucessos} XMLs convertidos\n📁 {xmls_nao_convertidos} XMLs não convertidos movidos\n🗑️ {xmls_excluidos} XMLs originais excluídos\n❌ {erros} erros\n\nDeseja abrir a pasta de saída?"
+                f"Renomeação finalizada!\n\n✅ {sucessos} XMLs renomeados\n❌ {erros} erros\n\n📁 Arquivos organizados em:\n   • Arquivos Renomeados\n\nDeseja abrir a pasta com os resultados?"
             )
             
             if resposta:
                 try:
-                    os.startfile(pasta_saida)
+                    os.startfile(pasta_xml)
                 except:
                     import webbrowser
-                    webbrowser.open(pasta_saida)
+                    webbrowser.open(pasta_xml)
     
     def exportar_para_excel(self):
         """Exporta os dados dos XMLs da pasta selecionada para um arquivo Excel"""
@@ -1262,6 +1090,14 @@ class DanfeAppMassa:
             
             messagebox.showinfo("Limpeza Concluída!", "✅ Todos os dados foram removidos da tabela!")
     
+    def processar_completo_thread(self):
+        """Thread para processamento completo: escanear + validar + renomear + gerar PDFs"""
+        if self.processando:
+            return
+        
+        # Usar função auxiliar (elimina duplicação)
+        self.executar_thread_segura(self.processar_completo)
+    
     def processar_selecionados_thread(self):
         if self.processando:
             return
@@ -1291,8 +1127,8 @@ class DanfeAppMassa:
         sucessos = 0
         erros = 0
         
-        self.root.after(0, lambda: self.btn_processar_selecionados.configure(state="disabled", text="🔄 Processando..."))
-        self.root.after(0, lambda: self.btn_validar_renomear.configure(state="disabled"))
+        self.root.after(0, lambda: self.btn_processar_completo.configure(state="disabled", text="🔄 Processando..."))
+
         
         self.root.after(0, lambda: self.log_renomeacao.insert("end", f"\n🚀 PROCESSANDO TODOS OS XMLs DA PASTA:\n"))
         self.root.after(0, lambda: self.log_renomeacao.insert("end", f"📊 Total: {total} arquivos\n"))
@@ -1316,14 +1152,237 @@ class DanfeAppMassa:
         self.root.after(0, lambda: self.log_renomeacao.insert("end", f"❌ Erros: {erros}\n"))
         self.root.after(0, lambda: self.log_renomeacao.insert("end", f"⏱️ Tempo total: {tempo_total:.1f} segundos\n"))
         
-        self.root.after(0, lambda: self.btn_processar_selecionados.configure(state="normal", text="🎯 PROCESSAR TODOS XMLs"))
-        self.root.after(0, lambda: self.btn_validar_renomear.configure(state="normal"))
+        self.root.after(0, lambda: self.btn_processar_completo.configure(state="normal", text="🚀 PROCESSAR COMPLETO"))
+
         self.root.after(0, lambda: self.log_renomeacao.see("end"))
         
         # Usar função auxiliar (elimina duplicação)
         self.mostrar_conclusao_processamento(sucessos, erros, tempo_total, pasta_saida)
         
         self.processando = False
+    
+    def processar_completo(self):
+        """Processamento completo: escanear + validar + renomear + gerar PDFs em um único fluxo"""
+        pasta_xml = self.entrada_pasta_renomear.get()
+        
+        if not pasta_xml:
+            messagebox.showerror("Erro", "Selecione a pasta com XMLs primeiro!")
+            return
+        
+        if not os.path.exists(pasta_xml):
+            messagebox.showerror("Erro", "Pasta de XMLs não existe!")
+            return
+        
+        self.processando = True
+        inicio_total = time.time()
+        
+        # Desabilitar botões durante processamento
+        self.root.after(0, lambda: self.btn_processar_completo.configure(state="disabled", text="🔄 Processando..."))
+
+
+        
+        try:
+            # ETAPA 1: ESCANEAMENTO AUTOMÁTICO
+            self.root.after(0, lambda: self.log_renomeacao.insert("end", "\n🚀 INICIANDO PROCESSAMENTO COMPLETO...\n\n"))
+            self.root.after(0, lambda: self.log_renomeacao.insert("end", "📋 ETAPA 1: Escaneando XMLs da pasta...\n"))
+            
+            todos_xmls = self.escanear_xmls_pasta(pasta_xml)
+            if not todos_xmls:
+                messagebox.showerror("Erro", "Nenhum arquivo XML encontrado na pasta!")
+                return
+            
+            # Mapear chaves automaticamente
+            self.chaves_xml = {}
+            arquivos_processados = 0
+            
+            for arquivo in todos_xmls:
+                nome_arquivo = os.path.basename(arquivo)
+                chave = self.extrair_chave_xml(arquivo)
+                
+                if chave:
+                    self.chaves_xml[chave] = arquivo
+                    arquivos_processados += 1
+            
+            self.root.after(0, lambda: self.log_renomeacao.insert("end", f"✅ {arquivos_processados} chaves mapeadas automaticamente\n\n"))
+            
+            # Criar pastas automaticamente no diretório dos XMLs
+            pasta_renomeados = os.path.join(pasta_xml, "Arquivos Renomeados")
+            pasta_nao_renomeados = os.path.join(pasta_xml, "Arquivos Não Renomeados")
+            pasta_pdf_convertido = os.path.join(pasta_xml, "PDFs convertidos")
+            
+            os.makedirs(pasta_renomeados, exist_ok=True)
+            os.makedirs(pasta_nao_renomeados, exist_ok=True)
+            os.makedirs(pasta_pdf_convertido, exist_ok=True)
+            
+            self.root.after(0, lambda: self.log_renomeacao.insert("end", f"📁 Pasta criada: {os.path.basename(pasta_renomeados)}\n"))
+            self.root.after(0, lambda: self.log_renomeacao.insert("end", f"📁 Pasta criada: {os.path.basename(pasta_nao_renomeados)}\n"))
+            self.root.after(0, lambda: self.log_renomeacao.insert("end", f"📁 Pasta criada: {os.path.basename(pasta_pdf_convertido)}\n\n"))
+            
+            # ETAPA 2: VALIDAÇÃO E RENOMEAÇÃO (se há dados na tabela)
+            linhas_com_dados = [linha for linha in self.linhas_renomeacao if linha['chave'].get().strip()]
+            
+            if linhas_com_dados:
+                self.root.after(0, lambda: self.log_renomeacao.insert("end", "📋 ETAPA 2: Validando e renomeando arquivos...\n"))
+                
+                sucessos_renomeacao = 0
+                erros_renomeacao = 0
+                
+                # Coletar chaves que serão convertidas
+                chaves_para_converter = set()
+                for linha in linhas_com_dados:
+                    chave_original = linha['chave'].get().strip()
+                    if self.validar_chave_nfe(chave_original) and chave_original in self.chaves_xml:
+                        chaves_para_converter.add(chave_original)
+                
+                # Processar renomeação
+                for linha in linhas_com_dados:
+                    chave_original = linha['chave'].get().strip()
+                    novo_nome = linha['nome'].get().strip()
+                    
+                    if not self.validar_chave_nfe(chave_original):
+                        self.root.after(0, lambda l=linha: l['status'].configure(text="❌ Chave inválida"))
+                        erros_renomeacao += 1
+                        continue
+                    
+                    if chave_original not in self.chaves_xml:
+                        self.root.after(0, lambda l=linha: l['status'].configure(text="❌ XML não encontrado"))
+                        erros_renomeacao += 1
+                        continue
+                    
+                    if not novo_nome:
+                        self.root.after(0, lambda l=linha: l['status'].configure(text="❌ Nome vazio"))
+                        erros_renomeacao += 1
+                        continue
+                    
+                    # Copiar e renomear arquivo
+                    try:
+                        arquivo_original = self.chaves_xml[chave_original]
+                        nome_arquivo_saida = f"{novo_nome}.xml"
+                        caminho_saida = os.path.join(pasta_renomeados, nome_arquivo_saida)
+                        
+                        shutil.move(arquivo_original, caminho_saida)
+                        self.root.after(0, lambda l=linha: l['status'].configure(text="✅ Renomeado"))
+                        sucessos_renomeacao += 1
+                        
+                    except Exception as e:
+                        self.root.after(0, lambda l=linha, err=str(e): l['status'].configure(text=f"❌ Erro: {err[:20]}"))
+                        erros_renomeacao += 1
+                
+                # Mover XMLs não renomeados
+                xmls_a_mover = {k: v for k, v in self.chaves_xml.items() if k not in chaves_para_converter}
+                for chave, arquivo in xmls_a_mover.items():
+                    try:
+                        nome_arquivo = os.path.basename(arquivo)
+                        destino = os.path.join(pasta_nao_renomeados, nome_arquivo)
+                        shutil.move(arquivo, destino)
+                        # Remover da lista original para não ser processado novamente
+                        del self.chaves_xml[chave]
+                    except:
+                        pass
+            else:
+                # Se não há dados na tabela, mover todos os XMLs para pasta não renomeados
+                sucessos_renomeacao = 0
+                erros_renomeacao = 0
+                self.root.after(0, lambda: self.log_renomeacao.insert("end", "📋 ETAPA 2: Movendo todos os XMLs para pasta 'Arquivos Não Renomeados'...\n"))
+                xmls_a_mover = self.chaves_xml.copy()
+                for chave, arquivo in xmls_a_mover.items():
+                    try:
+                        nome_arquivo = os.path.basename(arquivo)
+                        destino = os.path.join(pasta_nao_renomeados, nome_arquivo)
+                        shutil.move(arquivo, destino)
+                        del self.chaves_xml[chave]
+                    except:
+                        pass
+            
+            self.root.after(0, lambda: self.log_renomeacao.insert("end", f"✅ Renomeação: {sucessos_renomeacao} sucessos, {erros_renomeacao} erros\n\n"))
+            
+            # ETAPA 3: GERAÇÃO DE PDFs
+            self.root.after(0, lambda: self.log_renomeacao.insert("end", "📋 ETAPA 3: Gerando DANFEs (PDFs)...\n"))
+            
+            # Gerar PDFs para arquivos renomeados e não renomeados
+            xmls_renomeados = self.escanear_xmls_pasta(pasta_renomeados)
+            xmls_nao_renomeados = self.escanear_xmls_pasta(pasta_nao_renomeados)
+            
+            sucessos_pdf = 0
+            erros_pdf = 0
+            
+            def callback_sucesso_pdf(nome):
+                self.log_renomeacao.insert("end", f"✅ PDF: {nome}\n")
+                
+            def callback_erro_pdf(nome):
+                self.log_renomeacao.insert("end", f"❌ PDF: {nome}\n")
+            
+            # Processar PDFs dos arquivos renomeados
+            if xmls_renomeados:
+                self.root.after(0, lambda: self.log_renomeacao.insert("end", "📄 Gerando PDFs dos arquivos renomeados...\n"))
+                suc_ren, err_ren, _ = self.processar_xmls_paralelo(
+                    xmls_renomeados, pasta_pdf_convertido, callback_sucesso_pdf, callback_erro_pdf
+                )
+                sucessos_pdf += suc_ren
+                erros_pdf += err_ren
+            
+
+            
+            self.root.after(0, lambda: self.log_renomeacao.insert("end", f"\n✅ PDFs gerados: {sucessos_pdf}, erros: {erros_pdf}\n"))
+            
+            # RESULTADO FINAL
+            tempo_total = time.time() - inicio_total
+            
+            self.root.after(0, lambda: self.log_renomeacao.insert("end", f"\n🎉 PROCESSAMENTO COMPLETO FINALIZADO!\n"))
+            self.root.after(0, lambda: self.log_renomeacao.insert("end", f"📊 XMLs escaneados: {len(todos_xmls)}\n"))
+            if linhas_com_dados:
+                self.root.after(0, lambda: self.log_renomeacao.insert("end", f"📝 Arquivos renomeados: {sucessos_renomeacao}\n"))
+            if 'sucessos_pdf' in locals():
+                self.root.after(0, lambda: self.log_renomeacao.insert("end", f"📄 PDFs gerados: {sucessos_pdf}\n"))
+            self.root.after(0, lambda: self.log_renomeacao.insert("end", f"⏱️ Tempo total: {tempo_total:.1f} segundos\n"))
+            
+            # Mostrar resultado
+            if sucessos_pdf > 0:
+                resposta = messagebox.askyesno(
+                    "Processamento Completo!", 
+                    f"🎉 Processamento finalizado com sucesso!\n\n"
+                    f"📊 XMLs processados: {len(todos_xmls)}\n"
+                    f"📝 Renomeados: {sucessos_renomeacao if linhas_com_dados else 0}\n"
+                    f"📄 PDFs gerados: {sucessos_pdf}\n"
+                    f"⏱️ Tempo: {tempo_total:.1f}s\n\n"
+                    f"📁 Arquivos organizados em:\n"
+                    f"   • Arquivos Renomeados\n"
+
+                    f"   • PDF convertido\n\n"
+                    f"Deseja abrir a pasta com os resultados?"
+                )
+                
+                if resposta:
+                    try:
+                        os.startfile(pasta_xml)
+                    except:
+                        webbrowser.open(pasta_xml)
+            else:
+                messagebox.showinfo(
+                    "Processamento Concluído",
+                    f"✅ Processamento finalizado!\n\n"
+                    f"📊 XMLs processados: {len(todos_xmls)}\n"
+                    f"📝 Renomeados: {sucessos_renomeacao if linhas_com_dados else 0}\n"
+                    f"⏱️ Tempo: {tempo_total:.1f}s\n\n"
+                    f"📁 Arquivos organizados em:\n"
+                    f"   • Arquivos Renomeados\n"
+
+                    f"   • PDF convertido"
+                )
+        
+        except Exception as e:
+            error_msg = f"Erro durante processamento completo: {str(e)}"
+            messagebox.showerror("Erro no Processamento", error_msg)
+            self.root.after(0, lambda: self.log_renomeacao.insert("end", f"\n❌ ERRO: {error_msg}\n"))
+        
+        finally:
+            # Reabilitar botões
+            self.root.after(0, lambda: self.btn_processar_completo.configure(state="normal", text="🚀 PROCESSAR COMPLETO"))
+
+    
+            self.root.after(0, lambda: self.log_renomeacao.see("end"))
+            
+            self.processando = False
         
     # ============= FUNÇÕES AUXILIARES (ELIMINAM DUPLICAÇÕES) =============
     
@@ -1423,30 +1482,7 @@ class DanfeAppMassa:
             messagebox.showerror("Erro", f"Erro ao abrir seletor de pasta: {str(e)}")
             print(f"Erro no seletor de pasta XML: {e}")
                         
-    def selecionar_pasta_saida(self):
-        try:
-            pasta = filedialog.askdirectory(
-                title="Selecione a pasta para salvar os PDFs",
-                parent=self.root
-            )
-            if pasta:
-                self.pasta_saida.set(pasta)
-        except Exception as e:
-            messagebox.showerror("Erro", f"Erro ao abrir seletor de pasta: {str(e)}")
-            print(f"Erro no seletor de pasta de saída: {e}")
-            
-    def selecionar_pasta_saida_renomear(self):
-        try:
-            pasta = filedialog.askdirectory(
-                title="Selecione a pasta para salvar os XMLs renomeados",
-                parent=self.root
-            )
-            if pasta:
-                self.entrada_pasta_saida_renomear.delete(0, 'end')
-                self.entrada_pasta_saida_renomear.insert(0, pasta)
-        except Exception as e:
-            messagebox.showerror("Erro", f"Erro ao abrir seletor de pasta: {str(e)}")
-            print(f"Erro no seletor de pasta de saída renomear: {e}")
+
             
     def escanear_pasta(self):
         if not self.pasta_xml.get():
@@ -1503,7 +1539,7 @@ class DanfeAppMassa:
         sucessos = 0
         erros = 0
         
-        pasta_saida = self.pasta_saida.get() or self.pasta_xml.get()
+        pasta_saida = self.pasta_xml.get()
         
         self.root.after(0, lambda: self.btn_processar.configure(state="disabled", text="🔄 Processando..."))
         self.root.after(0, lambda: self.btn_escanear.configure(state="disabled"))
@@ -1553,6 +1589,14 @@ class DanfeAppMassa:
 
     def processar_xml_individual(self, arquivo_xml, pasta_saida):
         try:
+            # Verificar se o PDF já existe para evitar reprocessamento
+            nome_base_xml = os.path.splitext(os.path.basename(arquivo_xml))[0]
+            caminho_pdf_final = os.path.join(pasta_saida, f"{nome_base_xml}.pdf")
+
+            if os.path.exists(caminho_pdf_final):
+                self.root.after(0, lambda: self.log_renomeacao.insert("end", f"✅ PDF já existe, pulando: {os.path.basename(caminho_pdf_final)}\n"))
+                return True # Considerar como sucesso, pois o arquivo já está lá
+
             # Verificar se arquivo XML existe
             if not os.path.exists(arquivo_xml):
                 self.adicionar_log(f"❌ Arquivo não encontrado: {arquivo_xml}")
@@ -1823,7 +1867,7 @@ class DanfeAppMassa:
             total_processado = len(chaves_validas)
             self.log_renomeacao.insert("end", f"\n📋 LOTE DE DADOS PROCESSADO:\n")
             self.log_renomeacao.insert("end", f"✅ {total_processado} registros adicionados\n")
-            self.log_renomeacao.insert("end", "💡 Clique em 'ESCANEAR CHAVES' para validar\n")
+            self.log_renomeacao.insert("end", "💡 Use 'PROCESSAR COMPLETO' para validar\n")
             self.log_renomeacao.see("end")
             
             # Fechar janela

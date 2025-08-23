@@ -22,7 +22,7 @@ class DanfeAppMassa:
             ctk.set_appearance_mode("light")  # Tema claro
             ctk.set_default_color_theme("blue")
             
-            # Paleta de cores renamerPRO© (suavizada)
+            # Paleta de cores renamerAPP ©️
             self.cores = {
                 'azul_primary': '#003D7A',     # Azul principal
                 'azul_secondary': '#0056B3',   # Azul secundário
@@ -39,7 +39,7 @@ class DanfeAppMassa:
             
             # Criar janela principal primeiro
             self.root = ctk.CTk()
-            self.root.title("⚕️ renamerPRO©")
+            self.root.title("renamerAPP ©️")
             self.root.attributes('-fullscreen', True)
             self.root.minsize(800, 600)
             self.root.resizable(True, True)
@@ -162,8 +162,8 @@ class DanfeAppMassa:
         # Título compacto
         titulo_principal = ctk.CTkLabel(
             header_frame,
-            text="⚕️ renamerPRO©",
-            font=ctk.CTkFont(size=12, weight="bold"),
+            text="renamerAPP ©️",
+            font=ctk.CTkFont(size=14, weight="bold"),
             text_color=self.cores['branco_suave']
         )
         titulo_principal.pack(pady=4)
@@ -314,7 +314,7 @@ class DanfeAppMassa:
         )
         self.label_progresso.pack()
         
-        # Log profissional
+        # Log de Renomeação
         log_card = self.criar_card_profissional(
             container,
             "📋 Log de Processamento",
@@ -324,7 +324,7 @@ class DanfeAppMassa:
         
         self.log_text = ctk.CTkTextbox(
             log_card,
-            font=ctk.CTkFont(size=11, family="Consolas"),
+            font=ctk.CTkFont(size=13, family="Consolas"),
             corner_radius=8,
             fg_color=self.cores['cinza_medium'],
             text_color=self.cores['cinza_text'],
@@ -332,7 +332,7 @@ class DanfeAppMassa:
         )
         self.log_text.pack(fill="both", expand=True, padx=8, pady=8)
         
-        # Status bar profissional
+        # Status bar
         status_frame = ctk.CTkFrame(
             container,
             fg_color=self.cores['azul_primary'],
@@ -410,7 +410,10 @@ class DanfeAppMassa:
             "Localizar",
             self.selecionar_pasta_renomear,
             width=120,
-            icone="🔍"
+            height=40,
+            icone="🔍",
+            cor_principal=self.cores['azul_primary'],
+            cor_hover=self.cores['azul_accent']
         )
         btn_pasta_renomear.grid(row=0, column=1)
        
@@ -421,7 +424,7 @@ class DanfeAppMassa:
         )
         controles_card.pack(fill="x", pady=(0, 0))
         
-        # Botões organizados profissionalmente
+        # Botões organizados
         botoes_container = ctk.CTkFrame(controles_card, fg_color="transparent")
         botoes_container.pack(fill="x", padx=10, pady=(10, 10))
         botoes_container.grid_columnconfigure((0, 1, 2, 3), weight=1)
@@ -480,9 +483,7 @@ class DanfeAppMassa:
             cor_hover="#E55A2B",
         )
         self.btn_processar_completo.grid(row=0, column=4, padx=(8, 0), sticky="ew")
-        
 
-        
         # Tabela profissional
         tabela_card = self.criar_card_profissional(
             container,
@@ -566,9 +567,9 @@ class DanfeAppMassa:
         self.log_renomeacao.pack(fill="both", expand=True, padx=12, pady=12)
         
         # Log inicial
-        self.log_renomeacao.insert("0.0", """renamerPRO©
-📋 Aguardando configuração de diretório...
-💡 Selecione o diretório e escaneie as chaves para começar.""")
+        self.log_renomeacao.insert("0.0", """renamerAPP ©️
+        📋 Aguardando configuração de diretório...
+        💡 Selecione o diretório e escaneie as chaves para começar.""")
         
         # Adicionar uma linha inicial para garantir visibilidade da tabela
         self.adicionar_linha_renomeacao()
@@ -582,7 +583,7 @@ class DanfeAppMassa:
             border_width=1,
             border_color=self.cores['azul_light']
         )
-        linha_frame.pack(fill="x", padx=5, pady=3)
+        linha_frame.pack(fill="x", padx=4, pady=3)
         
         # Grid responsivo
         linha_frame.grid_columnconfigure(0, weight=2)  # Chave
@@ -856,6 +857,7 @@ class DanfeAppMassa:
         sucessos = 0
         erros = 0
         
+        #Log de renomeação
         self.root.after(0, lambda: self.log_renomeacao.insert("end", "\n🚀 INICIANDO VALIDAÇÃO E RENOMEAÇÃO...\n\n"))
         self.root.after(0, lambda: self.log_renomeacao.insert("end", f"📁 Pasta de origem: {pasta_xml}\n"))
         self.root.after(0, lambda: self.log_renomeacao.insert("end", f"📁 Arquivos renomeados: {pasta_renomeados}\n"))
@@ -1000,7 +1002,7 @@ class DanfeAppMassa:
                     title="Salvar planilha Excel",
                     defaultextension=".xlsx",
                     filetypes=[("Arquivos Excel", "*.xlsx"), ("Todos os arquivos", "*.*")],
-                    initialfile=f"renamerPRO_export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
+                    initialfile=f"renamerAPP_export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
                     parent=self.root
                 )
             except Exception as e:
@@ -1179,8 +1181,6 @@ class DanfeAppMassa:
         # Desabilitar botões durante processamento
         self.root.after(0, lambda: self.btn_processar_completo.configure(state="disabled", text="🔄 Processando..."))
 
-
-        
         try:
             # ETAPA 1: ESCANEAMENTO AUTOMÁTICO
             self.root.after(0, lambda: self.log_renomeacao.insert("end", "\n🚀 INICIANDO PROCESSAMENTO COMPLETO...\n\n"))
@@ -1457,10 +1457,10 @@ class DanfeAppMassa:
                 except:
                     webbrowser.open(pasta_saida)
 
-    # ============= FUNÇÕES ORIGINAIS (REFATORADAS) =============
+#Funções primárias
 
     def carregar_log_inicial(self):
-        log_inicial = """  renamerPRO©
+        log_inicial = """renamerAPP ©️
         
 🔹 Sistema inicializado com sucesso
 🔹 Aguardando configuração de pastas..."""
@@ -1883,7 +1883,7 @@ class DanfeAppMassa:
         self.root.protocol("WM_DELETE_WINDOW", self.fechar_aplicacao)
         
         # Configurar título
-        self.root.title("⚕️ renamerPRO©")
+        self.root.title("renamerAPP ©️")
         
         print("🖥️ Aplicação iniciada")
         

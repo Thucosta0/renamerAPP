@@ -91,7 +91,14 @@ try {
     // Cria o gerador de DANFE
     $danfe = new Danfe($xml);
     
-    // Ativar concatenação automática de informações sobre rastro e medicamento
+    // Configurar formatação personalizada da chave de acesso
+    // Formato: espaço no 9º dígito do final (################################### #########)
+    $reflection = new ReflectionClass($danfe);
+    $formatoChaveProperty = $reflection->getProperty('formatoChave');
+    $formatoChaveProperty->setAccessible(true);
+    $formatoChaveProperty->setValue($danfe, "################################### #########");
+    
+    // Ativar concatenação automática de informações sobre rastro
     $danfe->descProdInfoLoteTxt = true;
     
     // Gera o PDF da DANFE (formato A4 retrato - padrão Receita Federal)
@@ -101,13 +108,13 @@ try {
         throw new Exception("PDF gerado está vazio");
     }
     
-    // Nome do arquivo PDF - LÓGICA CORRIGIDA SEM _DANFE
+    // Nome do arquivo PDF
     if ($nomePersonalizado) {
         // Se nome personalizado foi fornecido, usar ele (sem extensão)
         $nomeBase = basename($nomePersonalizado, '.pdf'); // Remove .pdf se fornecido
         $nomePDF = dirname($arquivoXML) . '/' . $nomeBase . '.pdf';
     } else {
-        // Comportamento padrão - apenas o nome do XML (SEM _DANFE)
+        // Comportamento padrão - apenas o nome do XML
         $nomeBase = basename($arquivoXML, '.xml');
         $nomePDF = dirname($arquivoXML) . '/' . $nomeBase . '.pdf';
     }

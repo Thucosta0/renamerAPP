@@ -1,5 +1,5 @@
 ===============================================
-                 renamerPRO©
+                 renamerAPP©
   Sistema de Processamento e Renomeação de DANFEs
 ===============================================
 
@@ -41,5 +41,5 @@ Para dúvidas ou problemas, entre em contato com:
 © 2025 ThTweaks - Todos os direitos reservados
 
 ===============================================
-renamerPRO© é marca registrada da ThTweaks
+renamerAPP© é marca registrada da ThTweaks
 =============================================== 

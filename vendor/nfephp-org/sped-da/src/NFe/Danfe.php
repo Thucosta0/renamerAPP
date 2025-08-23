@@ -133,7 +133,7 @@ class Danfe extends DaCommon
      *
      * @var string
      */
-    protected $formatoChave = "############################################";
+    protected $formatoChave = "#### #### #### #### #### #### #### #### #### #### ####";
     /**
      * quantidade de itens já processados na montagem do DANFE
      *
@@ -1183,7 +1183,7 @@ class Danfe extends DaCommon
         $this->pdf->textBox($x, $y1, $w, $h, $texto, $aFont, 'T', 'L', 0, '');
         $aFont = ['font' => $this->fontePadrao, 'size' => 8, 'style' => 'B'];
         $y1    = $y + 8 + $bH;
-        $texto = $chave_acesso;
+        $texto = $this->formatField($chave_acesso, $this->formatoChave);
         $this->pdf->textBox($x + 2, $y1, $w - 2, $h, $texto, $aFont, 'T', 'C', 0, '');
         $y1                = $y + 12 + $bH;
         $aFont             = ['font' => $this->fontePadrao, 'size' => 8, 'style' => ''];
